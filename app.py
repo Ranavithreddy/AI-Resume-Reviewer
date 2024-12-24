@@ -35,10 +35,15 @@ def get_gemini_response(input_text, pdf_content, prompt):
 
 # Function to process uploaded PDF
 def input_pdf_setup(uploaded_file):
+    # Path to Poppler binaries (Update based on your OS and installation path)
+    poppler_path = "/usr/bin"  # Example for Linux/macOS; update if different
+
     if uploaded_file is not None:
-        images = pdf2image.convert_from_bytes(uploaded_file.read())
+        # Convert PDF to images
+        images = pdf2image.convert_from_bytes(uploaded_file.read(), poppler_path=poppler_path)
         first_page = images[0]
 
+        # Convert the first page to bytes
         img_byte_arr = io.BytesIO()
         first_page.save(img_byte_arr, format="JPEG")
         img_byte_arr = img_byte_arr.getvalue()
