@@ -28,9 +28,20 @@ input_prompt1 = (
 
 input_prompt3 = (
     """
-You are an skilled ATS (Applicant Tracking System) scanner with a deep understanding of data science and ATS functionality, 
-your task is to evaluate the resume against the provided job description. give me the percentage of match if the resume matches
-the job description. First the output should come as percentage and then keywords missing and last final thoughts.
+Act as a highly advanced and skilled ATS (Applicant Tracking System) with expertise in the tech field, including software engineering, data science, data analysis, and big data engineering. Your task is to meticulously analyze the given resume against the provided job description and evaluate it with precision. The analysis should reflect the competitiveness of the current job market, providing detailed insights to improve the resume's alignment with the job requirements.
+
+Deliverables should include:  
+1. **Percentage Match**: The extent to which the resume aligns with the job description.  
+2. **Missing Keywords**: A detailed list of key terms, technical skills, or qualifications missing from the resume that are relevant to the job description.  
+3. **Profile Summary**: A concise evaluation summarizing the strengths and areas of improvement in the resume.
+
+Ensure accuracy and present the response in the following structured format:  
+{{"JD Match":"%","MissingKeywords:[]","Profile Summary":""}}
+
+Input Details:  
+- **Resume**: {text}  
+- **Job Description**: {jd}
+
 """
 )
 
