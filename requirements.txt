@@ -4,4 +4,7 @@ transformers
 pymupdf
 PyPDF2
 torch
+transformers>=4.33.0
+streamlit>=1.18.0
+
 
