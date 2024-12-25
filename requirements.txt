@@ -4,3 +4,5 @@ transformers
 pymupdf
 PyPDF2
 torch
+transformers
+python-dotenv
