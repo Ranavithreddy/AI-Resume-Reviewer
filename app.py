@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 import streamlit as st
 import os
 from transformers import pipeline
+from PyPDF2 import PdfReader
 
 # Load environment variables
 load_dotenv()
@@ -46,7 +47,7 @@ input_prompt3 = (
 
 # Inputs
 job_description = st.text_area("Enter the job description:")
-uploaded_file = st.file_uploader("Upload your resume (Text format only):", type=["txt"])
+uploaded_file = st.file_uploader("Upload your resume (PDF format only):", type=["pdf"])
 analysis_type = st.selectbox(
     "Select the type of analysis:",
     ("HR Manager Review", "ATS Scanner Evaluation"),
@@ -56,8 +57,20 @@ if st.button("Analyze Resume"):
     if not job_description or not uploaded_file:
         st.error("Please provide a job description and upload a resume.")
     else:
-        # Read resume content
-        resume_content = uploaded_file.read().decode("utf-8")
+        # Read resume content from PDF
+        try:
+            reader = PdfReader(uploaded_file)
+            resume_content = ""
+            for page in reader.pages:
+                resume_content += page.extract_text()
+        except Exception as e:
+            st.error(f"Error reading the PDF file: {e}")
+            st.stop()
+
+        if not resume_content.strip():
+            st.error("The uploaded PDF is empty or not readable.")
+            st.stop()
+
         prompt = input_prompt1 if analysis_type == "HR Manager Review" else input_prompt3
 
         # Generate analysis
