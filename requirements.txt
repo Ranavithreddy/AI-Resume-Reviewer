@@ -1,4 +1,5 @@
-pymupdf
 streamlit
 python-dotenv
 transformers
+pymupdf
+tensorflow  # or torch, if you used PyTorch
