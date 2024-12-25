@@ -2,3 +2,4 @@ streamlit
 python-dotenv
 transformers
 pymupdf
+tensorflow==2.12.0
