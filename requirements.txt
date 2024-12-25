@@ -1,5 +1,4 @@
+pymupdf
 streamlit
 python-dotenv
 transformers
-Pillow
-pdf2image
