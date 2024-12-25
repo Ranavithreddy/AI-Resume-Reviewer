@@ -27,22 +27,22 @@ input_prompt1 = (
 )
 
 input_prompt3 = (
-    """
-Act as a highly advanced and skilled ATS (Applicant Tracking System) with expertise in the tech field, including software engineering, data science, data analysis, and big data engineering. Your task is to meticulously analyze the given resume against the provided job description and evaluate it with precision. The analysis should reflect the competitiveness of the current job market, providing detailed insights to improve the resume's alignment with the job requirements.
-
-Deliverables should include:  
-1. **Percentage Match**: The extent to which the resume aligns with the job description.  
-2. **Missing Keywords**: A detailed list of key terms, technical skills, or qualifications missing from the resume that are relevant to the job description.  
-3. **Profile Summary**: A concise evaluation summarizing the strengths and areas of improvement in the resume.
-
-Ensure accuracy and present the response in the following structured format:  
-{{"JD Match":"%","MissingKeywords:[]","Profile Summary":""}}
-
-Input Details:  
-- **Resume**: {text}  
-- **Job Description**: {jd}
 
 """
+Hey Act Like a skilled or very experience ATS(Application Tracking System)
+with a deep understanding of tech field,software engineering,data science ,data analyst
+and big data engineer. Your task is to evaluate the resume based on the given job description.
+You must consider the job market is very competitive and you should provide 
+best assistance for improving thr resumes. Assign the percentage Matching based 
+on Jd and
+the missing keywords with high accuracy
+resume:{text}
+description:{jd}
+
+I want the response in one single string having the structure
+{{"JD Match":"%","MissingKeywords:[]","Profile Summary":""}}
+"""
+
 )
 
 # Streamlit Application
