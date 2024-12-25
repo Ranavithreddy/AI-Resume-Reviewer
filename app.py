@@ -1,38 +1,39 @@
-from dotenv import load_dotenv
 import streamlit as st
-import os
 from transformers import pipeline
-from PyPDF2 import PdfReader
+import os
 
-# Load environment variables
-load_dotenv()
+# Set the page configuration
+st.set_page_config(page_title="AI Resume Reviewer", layout="centered")
 
-# Streamlit app setup
-st.set_page_config(page_title="Resume Reviewer")
-st.title("AI Resume Reviewer")
+# Load the Hugging Face API Key from environment variables
+api_key = os.getenv("HUGGING_FACE_API_KEY")
 
-# Hugging Face API key
-HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
-if not HUGGING_FACE_API_KEY:
-    st.error("HUGGING_FACE_API_KEY not found. Please set it in your environment variables.")
+# Check if the API key is available
+if not api_key:
+    st.error("HUGGING_FACE_API_KEY not found. Please set it in the environment variables.")
     st.stop()
 
-# Load the Hugging Face model
-st.write("Loading Hugging Face model...")
+# Initialize the Hugging Face pipeline
 try:
-    generator = pipeline(
-        "text-generation",
-        model="gpt2",
-        tokenizer="gpt2",
-        trust_remote_code=True,
-        use_auth_token=HUGGING_FACE_API_KEY
-    )
-    st.success("Model loaded successfully!")
+    model_name = "bert-base-uncased"  # Replace with the desired Hugging Face model
+    classifier = pipeline("text-classification", model=model_name)
 except Exception as e:
-    st.error(f"Error loading model: {e}")
+    st.error(f"Error initializing Hugging Face pipeline: {e}")
     st.stop()
 
-# Prompts
+# Streamlit UI
+st.title("AI Resume Reviewer")
+st.write("Upload your resume and job description to get insights and feedback.")
+
+# File upload section
+resume_file = st.file_uploader("Upload your Resume (PDF format)", type=["pdf"])
+job_description = st.text_area("Paste the Job Description here:")
+
+# Submit buttons
+submit1 = st.button("Analyze Resume")
+submit3 = st.button("Get Match Percentage")
+
+# Input prompts for analysis
 input_prompt1 = (
     "You are an experienced Technical HR Manager. "
     "Review the provided resume against the job description. "
@@ -45,40 +46,45 @@ input_prompt3 = (
     "Provide a match percentage, list missing keywords, and give final thoughts."
 )
 
-# Inputs
-job_description = st.text_area("Enter the job description:")
-uploaded_file = st.file_uploader("Upload your resume (PDF format only):", type=["pdf"])
-analysis_type = st.selectbox(
-    "Select the type of analysis:",
-    ("HR Manager Review", "ATS Scanner Evaluation"),
-)
-
-if st.button("Analyze Resume"):
-    if not job_description or not uploaded_file:
-        st.error("Please provide a job description and upload a resume.")
+# Process uploaded files
+if submit1:
+    if resume_file is None or not job_description:
+        st.error("Please upload a resume and provide a job description.")
     else:
-        # Read resume content from PDF
+        # Process the resume (example: extract text from PDF)
         try:
-            reader = PdfReader(uploaded_file)
-            resume_content = ""
-            for page in reader.pages:
-                resume_content += page.extract_text()
+            from PyPDF2 import PdfReader
+            reader = PdfReader(resume_file)
+            resume_text = " ".join([page.extract_text() for page in reader.pages])
         except Exception as e:
-            st.error(f"Error reading the PDF file: {e}")
+            st.error(f"Error reading PDF file: {e}")
             st.stop()
 
-        if not resume_content.strip():
-            st.error("The uploaded PDF is empty or not readable.")
-            st.stop()
-
-        prompt = input_prompt1 if analysis_type == "HR Manager Review" else input_prompt3
-
-        # Generate analysis
-        st.write("Analyzing resume...")
+        # Analyze using Hugging Face model
         try:
-            input_text = f"{prompt}\n\nJob Description: {job_description}\nResume: {resume_content}\nAnalysis:"
-            result = generator(input_text, max_length=500, num_return_sequences=1)
-            st.subheader("Analysis Result")
-            st.write(result[0]["generated_text"])
+            analysis = classifier(resume_text + "\n" + job_description)
+            st.write("**Analysis Results:**")
+            st.json(analysis)
         except Exception as e:
             st.error(f"Error during analysis: {e}")
+
+if submit3:
+    if resume_file is None or not job_description:
+        st.error("Please upload a resume and provide a job description.")
+    else:
+        # Process the resume (example: extract text from PDF)
+        try:
+            from PyPDF2 import PdfReader
+            reader = PdfReader(resume_file)
+            resume_text = " ".join([page.extract_text() for page in reader.pages])
+        except Exception as e:
+            st.error(f"Error reading PDF file: {e}")
+            st.stop()
+
+        # Perform ATS-like match percentage evaluation
+        try:
+            ats_analysis = classifier(resume_text + "\n" + job_description)
+            st.write("**Match Percentage Results:**")
+            st.json(ats_analysis)
+        except Exception as e:
+            st.error(f"Error during match percentage analysis: {e}")
