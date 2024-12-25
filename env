@@ -1,3 +1,4 @@
+
 # Environment variables for AI Resume Reviewer
-HUGGING_FACE_API_KEY=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
+GOOGLE_API_KEY=your-google-api-key
 
