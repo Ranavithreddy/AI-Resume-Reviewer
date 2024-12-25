@@ -1,31 +1,73 @@
+import os
 from dotenv import load_dotenv
 import streamlit as st
-import os
 from transformers import pipeline
+import base64
+import io
+from PIL import Image
+import pdf2image
+
+# Page Configuration (must be the first Streamlit command)
+st.set_page_config(page_title="AI Resume Reviewer")
 
 # Load environment variables
-load_dotenv()
+if os.path.exists(".env"):
+    load_dotenv()
+else:
+    st.warning(".env file not found. Please ensure environment variables are set in the cloud environment.")
 
-# Streamlit app setup
-st.set_page_config(page_title="Resume Reviewer")
-st.title("AI Resume Reviewer")
+# Load Hugging Face API Key
+hf_api_key = os.getenv("HUGGING_FACE_API_KEY")
+if not hf_api_key:
+    st.error("HUGGING_FACE_API_KEY not found. Please set it in the environment variables.")
 
-# Hugging Face API key
-HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
-if not HUGGING_FACE_API_KEY:
-    st.error("HUGGING_FACE_API_KEY not found. Please set it in your environment variables.")
-    st.stop()
+# Hugging Face Pipeline for Text Analysis
+def analyze_text_with_hf(input_text, prompt):
+    try:
+        generator = pipeline("text-generation", model="gpt2", use_auth_token=hf_api_key)
+        result = generator(prompt + input_text, max_length=150, num_return_sequences=1)
+        return result[0]["generated_text"]
+    except Exception as e:
+        return f"Error: {str(e)}"
 
-# Load the Hugging Face model
-st.write("Loading Hugging Face model...")
-try:
-    generator = pipeline("text-generation", model="gpt2")
-    st.success("Model loaded successfully!")
-except Exception as e:
-    st.error(f"Error loading model: {e}")
-    st.stop()
+# Function to process uploaded PDF
+def input_pdf_setup(uploaded_file):
+    # Path to Poppler binaries (Update based on your OS and installation path)
+    poppler_path = "/usr/bin"  # Example for Linux/macOS; update if different
 
-# Prompts
+    if uploaded_file is not None:
+        # Convert PDF to images
+        images = pdf2image.convert_from_bytes(uploaded_file.read(), poppler_path=poppler_path)
+        first_page = images[0]
+
+        # Convert the first page to bytes
+        img_byte_arr = io.BytesIO()
+        first_page.save(img_byte_arr, format="JPEG")
+        img_byte_arr = img_byte_arr.getvalue()
+
+        pdf_parts = [
+            {
+                "mime_type": "image/jpeg",
+                "data": base64.b64encode(img_byte_arr).decode()
+            }
+        ]
+        return pdf_parts
+    else:
+        raise FileNotFoundError("No file uploaded")
+
+# Streamlit UI
+st.header("AI Resume Reviewer")
+
+input_text = st.text_area("Job Description:")
+
+uploaded_file = st.file_uploader("Upload your resume (PDF):", type=["pdf"])
+
+if uploaded_file is not None:
+    st.write("PDF uploaded successfully.")
+
+submit1 = st.button("Analyze Resume")
+submit3 = st.button("Get Match Percentage")
+
 input_prompt1 = (
     "You are an experienced Technical HR Manager. "
     "Review the provided resume against the job description. "
@@ -38,28 +80,26 @@ input_prompt3 = (
     "Provide a match percentage, list missing keywords, and give final thoughts."
 )
 
-# Inputs
-job_description = st.text_area("Enter the job description:")
-uploaded_file = st.file_uploader("Upload your resume (Text format only):", type=["txt"])
-analysis_type = st.selectbox(
-    "Select the type of analysis:",
-    ("HR Manager Review", "ATS Scanner Evaluation"),
-)
-
-if st.button("Analyze Resume"):
-    if not job_description or not uploaded_file:
-        st.error("Please provide a job description and upload a resume.")
-    else:
-        # Read resume content
-        resume_content = uploaded_file.read().decode("utf-8")
-        prompt = input_prompt1 if analysis_type == "HR Manager Review" else input_prompt3
-
-        # Generate analysis
-        st.write("Analyzing resume...")
+if submit1:
+    if uploaded_file is not None:
         try:
-            input_text = f"{prompt}\n\nJob Description: {job_description}\nResume: {resume_content}\nAnalysis:"
-            result = generator(input_text, max_length=500, num_return_sequences=1)
+            pdf_content = input_pdf_setup(uploaded_file)
+            response = analyze_text_with_hf(input_text, input_prompt1)
             st.subheader("Analysis Result")
-            st.write(result[0]["generated_text"])
+            st.write(response)
         except Exception as e:
-            st.error(f"Error during analysis: {e}")
+            st.error(f"Error: {str(e)}")
+    else:
+        st.error("Please upload a resume.")
+
+if submit3:
+    if uploaded_file is not None:
+        try:
+            pdf_content = input_pdf_setup(uploaded_file)
+            response = analyze_text_with_hf(input_text, input_prompt3)
+            st.subheader("Match Percentage")
+            st.write(response)
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+    else:
+        st.error("Please upload a resume.")
