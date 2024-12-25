@@ -1,4 +1,4 @@
 streamlit
 python-dotenv
-transformers==4.33.3
+transformers
 pymupdf
