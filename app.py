@@ -1,38 +1,31 @@
-from dotenv import load_dotenv
-import streamlit as st
 import os
+import streamlit as st
 from transformers import pipeline
 from PyPDF2 import PdfReader
 
-# Load environment variables
-load_dotenv()
+# Set up the Hugging Face pipeline
+def load_hugging_face_pipeline():
+    try:
+        summarizer = pipeline("summarization", model="facebook/bart-large-cnn", use_auth_token=os.getenv("HUGGING_FACE_API_KEY"))
+        return summarizer
+    except Exception as e:
+        st.error(f"Error loading Hugging Face pipeline: {e}")
+        return None
 
-# Streamlit app setup
-st.set_page_config(page_title="Resume Reviewer")
+# Initialize pipeline
+summarizer = load_hugging_face_pipeline()
+
+# Streamlit App Header
 st.title("AI Resume Reviewer")
+st.write("Upload your resume and job description to get insights and a match percentage!")
 
-# Hugging Face API key
-HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
-if not HUGGING_FACE_API_KEY:
-    st.error("HUGGING_FACE_API_KEY not found. Please set it in your environment variables.")
-    st.stop()
+# Upload Files
+resume_file = st.file_uploader("Upload your resume (PDF or Text format only)", type=["pdf", "txt"])
+job_description = st.text_area("Paste the job description here:")
 
-# Load the Hugging Face model
-st.write("Loading Hugging Face model...")
-try:
-    generator = pipeline(
-        "text-generation",
-        model="gpt2",
-        tokenizer="gpt2",
-        trust_remote_code=True,
-        use_auth_token=HUGGING_FACE_API_KEY
-    )
-    st.success("Model loaded successfully!")
-except Exception as e:
-    st.error(f"Error loading model: {e}")
-    st.stop()
+submit1 = st.button("Analyze Resume")
+submit3 = st.button("Get Match Percentage")
 
-# Prompts
 input_prompt1 = (
     "You are an experienced Technical HR Manager. "
     "Review the provided resume against the job description. "
@@ -45,40 +38,34 @@ input_prompt3 = (
     "Provide a match percentage, list missing keywords, and give final thoughts."
 )
 
-# Inputs
-job_description = st.text_area("Enter the job description:")
-uploaded_file = st.file_uploader("Upload your resume (PDF format only):", type=["pdf"])
-analysis_type = st.selectbox(
-    "Select the type of analysis:",
-    ("HR Manager Review", "ATS Scanner Evaluation"),
-)
-
-if st.button("Analyze Resume"):
-    if not job_description or not uploaded_file:
-        st.error("Please provide a job description and upload a resume.")
+def read_file(file):
+    if file.type == "application/pdf":
+        pdf_reader = PdfReader(file)
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+        return text
+    elif file.type == "text/plain":
+        return file.read().decode("utf-8")
     else:
-        # Read resume content from PDF
+        return ""
+
+if submit1 and resume_file and job_description:
+    st.subheader("Analysis Results")
+    resume_text = read_file(resume_file)
+    if summarizer:
         try:
-            reader = PdfReader(uploaded_file)
-            resume_content = ""
-            for page in reader.pages:
-                resume_content += page.extract_text()
+            summary = summarizer(f"{input_prompt1}\n\nResume:\n{resume_text}\n\nJob Description:\n{job_description}", max_length=500, min_length=50, do_sample=False)
+            st.write(summary[0]['summary_text'])
         except Exception as e:
-            st.error(f"Error reading the PDF file: {e}")
-            st.stop()
+            st.error(f"Error during analysis: {e}")
 
-        if not resume_content.strip():
-            st.error("The uploaded PDF is empty or not readable.")
-            st.stop()
-
-        prompt = input_prompt1 if analysis_type == "HR Manager Review" else input_prompt3
-
-        # Generate analysis
-        st.write("Analyzing resume...")
+if submit3 and resume_file and job_description:
+    st.subheader("Match Percentage")
+    resume_text = read_file(resume_file)
+    if summarizer:
         try:
-            input_text = f"{prompt}\n\nJob Description: {job_description}\nResume: {resume_content}\nAnalysis:"
-            result = generator(input_text, max_length=500, num_return_sequences=1)
-            st.subheader("Analysis Result")
-            st.write(result[0]["generated_text"])
+            match_result = summarizer(f"{input_prompt3}\n\nResume:\n{resume_text}\n\nJob Description:\n{job_description}", max_length=500, min_length=50, do_sample=False)
+            st.write(match_result[0]['summary_text'])
         except Exception as e:
             st.error(f"Error during analysis: {e}")
