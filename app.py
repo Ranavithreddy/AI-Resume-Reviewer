@@ -1,8 +1,7 @@
-
 import os
 from dotenv import load_dotenv
 import streamlit as st
-import google.generativeai as genai
+from transformers import pipeline
 import base64
 import io
 from PIL import Image
@@ -17,19 +16,17 @@ if os.path.exists(".env"):
 else:
     st.warning(".env file not found. Please ensure environment variables are set in the cloud environment.")
 
-# Configure Google Generative AI API
-api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    st.error("GOOGLE_API_KEY not found. Please set it in the environment variables.")
-else:
-    genai.configure(api_key=api_key)
+# Load Hugging Face API Key
+hf_api_key = os.getenv("HUGGING_FACE_API_KEY")
+if not hf_api_key:
+    st.error("HUGGING_FACE_API_KEY not found. Please set it in the environment variables.")
 
-# Function to interact with Google Generative AI API
-def get_gemini_response(input_text, pdf_content, prompt):
+# Hugging Face Pipeline for Text Analysis
+def analyze_text_with_hf(input_text, prompt):
     try:
-        model = genai.GenerativeModel("gemini-pro-vision")
-        response = model.generate_content([input_text, pdf_content[0], prompt])
-        return response.text
+        generator = pipeline("text-generation", model="gpt2", use_auth_token=hf_api_key)
+        result = generator(prompt + input_text, max_length=150, num_return_sequences=1)
+        return result[0]["generated_text"]
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -87,7 +84,7 @@ if submit1:
     if uploaded_file is not None:
         try:
             pdf_content = input_pdf_setup(uploaded_file)
-            response = get_gemini_response(input_text, pdf_content, input_prompt1)
+            response = analyze_text_with_hf(input_text, input_prompt1)
             st.subheader("Analysis Result")
             st.write(response)
         except Exception as e:
@@ -99,7 +96,7 @@ if submit3:
     if uploaded_file is not None:
         try:
             pdf_content = input_pdf_setup(uploaded_file)
-            response = get_gemini_response(input_text, pdf_content, input_prompt3)
+            response = analyze_text_with_hf(input_text, input_prompt3)
             st.subheader("Match Percentage")
             st.write(response)
         except Exception as e:
