@@ -1,11 +1,8 @@
 import os
 from dotenv import load_dotenv
 import streamlit as st
+import fitz  # PyMuPDF
 from transformers import pipeline
-import base64
-import io
-from PIL import Image
-import pdf2image
 
 # Page Configuration (must be the first Streamlit command)
 st.set_page_config(page_title="AI Resume Reviewer")
@@ -30,30 +27,16 @@ def analyze_text_with_hf(input_text, prompt):
     except Exception as e:
         return f"Error: {str(e)}"
 
-# Function to process uploaded PDF
-def input_pdf_setup(uploaded_file):
-    # Path to Poppler binaries (Update based on your OS and installation path)
-    poppler_path = "/usr/bin"  # Example for Linux/macOS; update if different
-
-    if uploaded_file is not None:
-        # Convert PDF to images
-        images = pdf2image.convert_from_bytes(uploaded_file.read(), poppler_path=poppler_path)
-        first_page = images[0]
-
-        # Convert the first page to bytes
-        img_byte_arr = io.BytesIO()
-        first_page.save(img_byte_arr, format="JPEG")
-        img_byte_arr = img_byte_arr.getvalue()
-
-        pdf_parts = [
-            {
-                "mime_type": "image/jpeg",
-                "data": base64.b64encode(img_byte_arr).decode()
-            }
-        ]
-        return pdf_parts
-    else:
-        raise FileNotFoundError("No file uploaded")
+# Function to extract text from the first page of a PDF
+def extract_first_page_text(uploaded_file):
+    try:
+        pdf_document = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+        first_page = pdf_document[0]
+        text = first_page.get_text()
+        pdf_document.close()
+        return text
+    except Exception as e:
+        return f"Error extracting text: {str(e)}"
 
 # Streamlit UI
 st.header("AI Resume Reviewer")
@@ -83,8 +66,8 @@ input_prompt3 = (
 if submit1:
     if uploaded_file is not None:
         try:
-            pdf_content = input_pdf_setup(uploaded_file)
-            response = analyze_text_with_hf(input_text, input_prompt1)
+            pdf_content = extract_first_page_text(uploaded_file)
+            response = analyze_text_with_hf(pdf_content, input_prompt1)
             st.subheader("Analysis Result")
             st.write(response)
         except Exception as e:
@@ -95,8 +78,8 @@ if submit1:
 if submit3:
     if uploaded_file is not None:
         try:
-            pdf_content = input_pdf_setup(uploaded_file)
-            response = analyze_text_with_hf(input_text, input_prompt3)
+            pdf_content = extract_first_page_text(uploaded_file)
+            response = analyze_text_with_hf(pdf_content, input_prompt3)
             st.subheader("Match Percentage")
             st.write(response)
         except Exception as e:
